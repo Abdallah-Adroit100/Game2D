@@ -1,4 +1,5 @@
 package PlayerEntity;
+import java.util.HashSet;
 
 import main.GamePanel;
 import main.KeyHandler;
@@ -17,12 +18,16 @@ public class Player2 extends PlayerEntity {
     private int stepsRemaining;
     private Dice dice;
     int hasKeyP2 = 0;
+    private HashSet<String> visitedTiles; // To track visited tiles
+
     private List<Weapon> inventory = new ArrayList<>();
     private Weapon equippedWeapon;
     public Player2(GamePanel gp, KeyHandler keyH, int health, int money, int power) {
         //super(200, 600, 200);
         this.gp = gp;
         this.keyH = keyH;
+        visitedTiles = new HashSet<>();
+
 
         solidArea = new Rectangle();
         solidArea.x=8;
@@ -172,81 +177,76 @@ public class Player2 extends PlayerEntity {
         }
     }
 
+
+
     public void update() {
         if (gp.turnManager.isPlayerTurn(this) && !moving) {
-            // Player 2 must press 'R' to roll the dice if steps are 0.
             if (stepsRemaining == 0 && keyH.rPressed) {
                 movingTurn = true;
                 stepsRemaining = dice.roll();
+                visitedTiles.clear();
                 System.out.println("Player 2 rolled: " + stepsRemaining + " steps.");
-                keyH.rPressed = false; // Reset the dice roll flag to prevent multiple rolls in one turn.
+                keyH.rPressed = false;
             }
 
-            // Proceed with the movement if the dice has been rolled.
             if (stepsRemaining > 0 && (keyH.wPressed || keyH.sPressed || keyH.aPressed || keyH.dPressed)) {
                 setDirectionAndTargetPositionP2();
 
-                collisionOn = gp.cChecker.checkTileCollision(this, targetX, targetY);
-                if (!collisionOn) {
+                String nextTile = targetX/gp.tileSize + "," + targetY/gp.tileSize;
+                if (!visitedTiles.contains(nextTile) && !gp.cChecker.checkTileCollision(this, targetX, targetY)) {
                     moving = true;
-                    stepsRemaining--; // Decrement steps after each move
+                    stepsRemaining--;
+                    visitedTiles.add(nextTile);
                 }
 
-                // Reset key press states
-                if (keyH.wPressed) keyH.wPressed = false;
-                if (keyH.sPressed) keyH.sPressed = false;
-                if (keyH.aPressed) keyH.aPressed = false;
-                if (keyH.dPressed) keyH.dPressed = false;
+                keyH.wPressed = keyH.sPressed = keyH.aPressed = keyH.dPressed = false;
 
-                // End the player's turn if they have no more steps to move
                 if (stepsRemaining == 0) {
-                    gp.turnManager.endTurn();
                     movingTurn = false;
+                    gp.turnManager.endTurn();
                 }
             }
-            //System.out.println(worldX + " and " + worldY);
         }
 
-        // If in motion, continue moving towards the target
         if (moving) {
             moveTowardsTargetP2();
             updateAnimationP2();
         }
 
-        // Check for object interactions
-        int objIndex = gp.cChecker.checkObject(this, true);
-        pickUpObject(objIndex);
-        //System.out.println("Player 2: " + worldX + " and " + worldY);
+//        int objIndex = gp.cChecker.checkObject(this, true);
+//        pickUpObject(objIndex);
     }
 
+    // Rest of the Player2 class...
 
-    public void pickUpObject(int i) {
-        if (i != 999) {
-            String ObjectName = gp.obj[i].name;
 
-            switch(ObjectName){
-                case "Key":
-                    hasKeyP2++;
-                    gp.obj[i] = null;
-                    System.out.println("key for P2:"+hasKeyP2);
-                    break;
-
-                case "Castle" :
-                    if (hasKeyP2 >= 3){
-                        gp.obj[i] = null;
-                        hasKeyP2--;
-                    }
-                    System.out.println("key for P2:"+hasKeyP2);
-                    break;
-
-                case "market2":
-                    gp.obj[i] = null;
-                    System.out.println("empty");
-                    break;
-
-            }
-        }
-    }
+//    public void pickUpObject(int i) {
+//        if (i != 999) {
+//            String ObjectName = gp.obj[i].name;
+//
+//            switch(ObjectName){
+//                case "Key":
+//                    hasKeyP2++;
+//                    gp.obj[i] = null;
+//                    System.out.println("key for P2:"+hasKeyP2);
+//                    break;
+//
+//                case "Castle" :
+//                    if (hasKeyP2 >= 3){
+//                        gp.obj[i] = null;
+//                        hasKeyP2--;
+//                    }
+//                    System.out.println("key for P2:"+hasKeyP2);
+//                    break;
+//
+//                case "market2":
+//                    gp.obj[i] = null;
+//                    System.out.println("empty");
+//                    break;
+//
+//            }
+//        }
+//    }
     private void setDirectionAndTargetPositionP2() {
         int tileSize = gp.tileSize;
 

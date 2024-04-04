@@ -1,4 +1,5 @@
 package PlayerEntity;
+import java.util.HashSet;
 
 import main.GamePanel;
 import main.KeyHandler;
@@ -27,6 +28,7 @@ public class Player extends PlayerEntity {
     GamePanel gp;
     KeyHandler keyH;
     int sword = 0;
+    private HashSet<String> visitedTiles; // To track visited tiles
 
     int hasKey = 0;
 
@@ -34,6 +36,7 @@ public class Player extends PlayerEntity {
         //super(200, 500, 150);
         this.gp = gp;
         this.keyH = keyH;
+        visitedTiles = new HashSet<>();
 
         solidArea = new Rectangle();
         solidArea.x = 8;
@@ -79,9 +82,11 @@ public class Player extends PlayerEntity {
     public int getMoney() {
         return this.money;
     }
+
     public List<Weapon> getInventory() {
         return inventory;
     }
+
     public int getStepsRemaining() {
         return stepsRemaining;
     }
@@ -90,6 +95,7 @@ public class Player extends PlayerEntity {
     public void setStepsRemaining(int stepsRemaining) {
         this.stepsRemaining = stepsRemaining;
     }
+
     public void getPlayerImage() {
 
         try {
@@ -119,31 +125,37 @@ public class Player extends PlayerEntity {
         }
     }
 
+
     public void update() {
         if (gp.turnManager.isPlayerTurn(this) && !moving) {
-            // Player must press 'R' to roll the dice if steps are 0.
+            // Check for dice roll and reset visited tiles at the start of a turn
             if (stepsRemaining == 0 && keyH.rPressed) {
                 movingTurn = true;
                 stepsRemaining = dice.roll();
+                visitedTiles.clear();
                 System.out.println("Dice rolled: " + stepsRemaining + " steps.");
                 keyH.rPressed = false; // Reset the dice roll flag to prevent multiple rolls in one turn.
             }
 
-            // Proceed with the movement if the dice has been rolled.
-            if (stepsRemaining > 0 && (keyH.upPressed || keyH.downPressed || keyH.leftPressed || keyH.rightPressed)) {
+            // Proceed with the movement if the dice has been rolled
+            if (stepsRemaining > 0) {
                 setDirectionAndTargetPosition();
 
-                collisionOn = gp.cChecker.checkTileCollision(this, targetX, targetY);
-                if (!collisionOn) {
+                // Create a string representation of the target tile
+                String nextTile = targetX / gp.tileSize + "," + targetY / gp.tileSize;
+
+                // Check for revisiting a tile and collision
+                if (!visitedTiles.contains(nextTile) && !gp.cChecker.checkTileCollision(this, targetX, targetY)) {
                     moving = true;
                     stepsRemaining--; // Decrement steps after each move
+                    visitedTiles.add(nextTile); // Add tile to visited set
+                } else if (visitedTiles.contains(nextTile)) {
+                    //System.out.println("You've already visited this tile in this turn.");
+                    // Handle already visited tile - maybe a warning message to the player
                 }
 
                 // Reset movement keys to prevent continuous movement
-                if (keyH.upPressed) keyH.upPressed = false;
-                if (keyH.downPressed) keyH.downPressed = false;
-                if (keyH.leftPressed) keyH.leftPressed = false;
-                if (keyH.rightPressed) keyH.rightPressed = false;
+                keyH.upPressed = keyH.downPressed = keyH.leftPressed = keyH.rightPressed = false;
 
                 // End the player's turn if they have no more steps to move
                 if (stepsRemaining == 0) {
@@ -160,40 +172,40 @@ public class Player extends PlayerEntity {
         }
 
         // Check for object interactions
-        int objIndex = gp.cChecker.checkObject(this, true);
-        pickUpObject(objIndex);
-        //System.out.println("Player 1: " + worldX + " and " + worldY);
+//        int objIndex = gp.cChecker.checkObject(this, true);
+//        pickUpObject(objIndex);
     }
 
 
-    public void pickUpObject(int i) {
-        if (i != 999) {
-            String ObjectName = gp.obj[i].name;
 
-            switch (ObjectName) {
-                case "Key":
-                    hasKey++;
-                    gp.obj[i] = null;
-                    System.out.println("key:" + hasKey);
-                    break;
-
-                case "Castle":
-                    if (hasKey >= 3) {
-                        gp.obj[i] = null;
-                        hasKey--;
-                    }
-                    System.out.println("key:" + hasKey);
-
-                    break;
-
-                case "market2":
-                    gp.obj[i] = null;
-                    System.out.println("empty");
-                    break;
-
-            }
-        }
-    }
+//    public void pickUpObject(int i) {
+//        if (i != 999) {
+//            String ObjectName = gp.obj[i].name;
+//
+//            switch (ObjectName) {
+//                case "Key":
+//                    hasKey++;
+//                    gp.obj[i] = null;
+//                    System.out.println("key:" + hasKey);
+//                    break;
+//
+//                case "Castle":
+//                    if (hasKey >= 3) {
+//                        gp.obj[i] = null;
+//                        hasKey--;
+//                    }
+//                    System.out.println("key:" + hasKey);
+//
+//                    break;
+//
+//                case "market2":
+//                    gp.obj[i] = null;
+//                    System.out.println("empty");
+//                    break;
+//
+//            }
+//        }
+//    }
 
     private void setDirectionAndTargetPosition() {
         int tileSize = gp.tileSize;
